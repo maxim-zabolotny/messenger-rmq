@@ -1,26 +1,31 @@
 import { Controller } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Ctx, MessagePattern, RmqContext } from '@nestjs/microservices';
+import {
+  Ctx,
+  MessagePattern,
+  Payload,
+  RmqContext,
+} from '@nestjs/microservices';
+import { SharedService } from '@app/shared';
+import { NewUserDTO } from './dtos/newUser.dto';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private sharedService: SharedService,
+  ) {}
 
   @MessagePattern({ cmd: 'get-users' })
   async getUser(@Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const message = context.getMessage();
-    // console.log(channel);
-    // channel.asc(message);
+    this.sharedService.acknowledgeMessage(context);
     return this.authService.getUsers();
   }
 
-  @MessagePattern({ cmd: 'post-user' })
-  async postUser(@Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const message = context.getMessage();
-    // console.log(channel);
-    // channel.asc(message);
-    return this.authService.createUser();
+  @MessagePattern({ cmd: 'register' })
+  async postUser(@Ctx() context: RmqContext, @Payload() newUser: NewUserDTO) {
+    this.sharedService.acknowledgeMessage(context);
+
+    return this.authService.register(newUser);
   }
 }
